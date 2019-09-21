@@ -14,6 +14,7 @@
 
 
 from selenium import webdriver
+from huey.contrib.mini import MiniHuey
 from time import sleep
 
 
@@ -34,8 +35,13 @@ driver = webdriver.WebKitGTK()
 
 '''
 
-
+huey = MiniHuey(interval=1)
 ANSWER_FIELDS = 3
+
+ways = {
+    '<': -1,
+    '>': +1,
+}
 
 fill_xpaths = [
     '/html/body/div/div[2]/form/div/div[2]/div[2]/div[{ind}]/div/div[2]/div/div[1]/div/div[1]/input'.format(
@@ -44,6 +50,16 @@ fill_xpaths = [
     for ind in range(ANSWER_FIELDS)
 ]
 send_button_xpath = '/html/body/div/div[2]/form/div/div[2]/div[3]/div[1]/div/div/span'
+
+
+@huey.task()
+def fill_up(fill_with):
+    for i in range(ANSWER_FIELDS):
+        element = driver.find_element_by_xpath(fill_xpaths[i])
+        element.send_keys(fill_with[i])
+    send_button_element = driver.find_element_by_xpath(send_button_xpath)
+    send_button_element.click()
+
 
 driver.get(FORM_URL)
 problem_set_number = input('Задание: ')
@@ -54,10 +70,6 @@ while wait:
 
 ind = int(start_with)
 
-ways = {
-    '<': -1,
-    '>': +1,
-}
 while True:
     try:
         driver.get(FORM_URL)
@@ -72,9 +84,5 @@ while True:
         ind,
         answer
     ]
-    for i in range(ANSWER_FIELDS):
-        element = driver.find_element_by_xpath(fill_xpaths[i])
-        element.send_keys(fill_with[i])
-    send_button_element = driver.find_element_by_xpath(send_button_xpath)
-    send_button_element.click()
+    fill_up(fill_with)
     ind += 1
